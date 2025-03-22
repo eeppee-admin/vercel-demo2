@@ -32,9 +32,15 @@ function App() {
   }, [])
 
   // 修改后的提交分数函数
+  // 在组件顶部添加环境变量
+  const baseUrl = process.env.NODE_ENV === 'development' 
+    ? '/api' 
+    : `https://${window.location.host}/api`;
+  
+  // 修改所有fetch调用（示例修改POST请求）
   const submitScore = async (name = 'Anonymous') => {
     try {
-      const response = await fetch('/api/scores', {
+      const response = await fetch(`${baseUrl}/scores`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, score })
