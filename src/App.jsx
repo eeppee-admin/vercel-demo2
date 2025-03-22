@@ -12,6 +12,44 @@ function App() {
   const [gameOver, setGameOver] = useState(false)
   const [score, setScore] = useState(0)
 
+  const [apiData, setApiData] = useState('')
+  const [leaderboard, setLeaderboard] = useState([])
+
+  // 测试API接口
+  useEffect(() => {
+    fetch('/api/hello')
+      .then(res => res.json())
+      .then(data => setApiData(data.message))
+      .catch(console.error)
+  }, [])
+
+  // 初始化时加载排行榜
+  useEffect(() => {
+    fetch('/api/scores')
+      .then(res => res.json())
+      .then(data => setLeaderboard(data))
+      .catch(console.error)
+  }, [])
+
+  // 修改后的提交分数函数
+  const submitScore = async (name = 'Anonymous') => {
+    try {
+      const response = await fetch('/api/scores', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, score })
+      });
+
+      if (response.ok) {
+        const newData = await response.json();
+        setLeaderboard(newData);  // 直接更新排行榜
+      }
+    } catch (error) {
+      console.error('提交失败:', error);
+    }
+  }
+
+
   useEffect(() => {
     const handleKeyPress = (e) => {
       switch (e.key) {
@@ -27,7 +65,7 @@ function App() {
 
   useEffect(() => {
     if (gameOver) return
-    
+
     const moveSnake = () => {
       const newSnake = [...snake]
       const head = { ...newSnake[0] }
@@ -40,14 +78,14 @@ function App() {
       }
 
       // 碰撞检测
-      if (head.x < 0 || head.x >= GRID_SIZE || head.y < 0 || head.y >= GRID_SIZE || 
-          snake.some(segment => segment.x === head.x && segment.y === head.y)) {
+      if (head.x < 0 || head.x >= GRID_SIZE || head.y < 0 || head.y >= GRID_SIZE ||
+        snake.some(segment => segment.x === head.x && segment.y === head.y)) {
         setGameOver(true)
         return
       }
 
       newSnake.unshift(head)
-      
+
       // 吃食物逻辑
       if (head.x === food.x && head.y === food.y) {
         setScore(s => s + 10)
@@ -72,6 +110,7 @@ function App() {
     setDirection('RIGHT')
     setGameOver(false)
     setScore(0)
+    loadLeaderboard()
   }
 
   return (
@@ -85,14 +124,35 @@ function App() {
           const isFood = food.x === x && food.y === y
 
           return (
-            <div 
+            <div
               key={index}
               className={`cell ${isSnake ? 'snake' : ''} ${isFood ? 'food' : ''}`}
             />
           )
         })}
       </div>
-      {gameOver && <button className="restart-btn" onClick={resetGame}>Restart Game</button>}
+      <div className="game-container">
+        <div className="api-status">API状态: {apiData || '正在连接...'}</div>
+        {gameOver && (
+          <div className="game-over-panel">
+            <button onClick={() => {
+              const name = prompt('输入你的名字') || 'Anonymous';
+              submitScore(name);
+            }}>
+              提交分数
+            </button>
+            <h3>实时排行榜</h3>
+            <ul>
+              {leaderboard.slice(0, 5).map((entry, index) => (
+                <li key={index}>
+                  <span className="rank">{index + 1}.</span>
+                  {entry.name} - {entry.score}分
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
